@@ -3,7 +3,7 @@
 
 ---
 I used three different methods on PASCAL VOC 2012 validation set.
-For detailed information see [this pdf file](https://github.com/AmirooR/ImageClassificationExperiment/blob/master/PascalVOC2012_ImageClassification.pdf).
+For detailed information see [this pdf file](https://github.com/AmirooR/ImageClassificationExperiment/blob/master/PascalVOC2012_ImageClassification.pdf?raw=true).
 
 ---
 ### Methods
