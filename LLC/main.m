@@ -82,7 +82,7 @@ class_names = {'aeroplane','bicycle','bird','boat','bottle','bus','chair','cat',
 %Loading train and test data
 feaDir = 'F:\Rahimi\PascalVOCLLCCode\1\';
 annotationDir = 'D:\Rahimi\VOCdevkit\VOC2012\ImageSets\Main\';
-thisName = 'class_names{1}; %it is a tmp name
+thisName = class_names{1}; %it is a tmp name
 featureSize = 21504; %size of final feature vector
 [trainNames,~] = textread([annotationDir sprintf('%s_train.txt',thisName)],'%s %d');
 [testNames,~] = textread([annotationDir sprintf('%s_val.txt',thisName)],'%s %d');
