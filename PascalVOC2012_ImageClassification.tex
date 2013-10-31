@@ -1,0 +1,177 @@
+\documentclass[a4paper,12pt]{article}
+\usepackage[top=25mm, bottom=25mm, left=25mm, right=25mm]{geometry}
+\usepackage[pagebackref=false,colorlinks,linkcolor=blue,citecolor=magenta]{hyperref}
+%\usepackage{hyperref} 
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage[tight,footnotesize]{subfigure}
+\begin{document}
+
+\begin{center}
+%In The Name of God.
+%
+%The Merciful, The Compassionate.
+%
+\emph{PASCAL VOC 2012 Image Classification},
+
+Amir Rahimi
+
+June, 2013
+\end{center}
+
+\section{Image classification}
+The methods which use local features for image classification have attracted the researchers in recent years. The main idea behind these methods is inspired by the bag-of-words methods in text classification. Csurka \textit{et al} \cite{shaban3} first introduced these methods for image classification in 2004. All of these kind of feature extraction methods can be represented in a single framework with the following steps:
+
+\begin{enumerate}
+\item Selecting  local patches on each image and extracting their features.
+
+\item Constructing bases which are key features (dictionary learning).
+
+\item Representing each feature by constructed bases (coding). 
+
+\item Mixing local patch codes to obtain the final feature vector (pooling).
+\end{enumerate}
+
+The first step in these methods is to select a number of points along with their neighbourhoods. These points are called local points  and their neighbourhoods are called local patches of images. Then,  features such as SIFT\cite{shaban18} are extracted from these patches. 
+The feature extraction method is chosen to be invariant to different kind of transformations such as rotation and scale. The output of this
+step is a D-dimensional ( D = 128 for SIFT descriptors) vector for each patch. These vectors are called image descriptors and are shown by 
+$s_i$.  The selection method of local patches is an open problem. They are usually selected randomly, on edges, or uniformly from an image. There have been a lot of experiments on comparison of different selection strategies\cite{shaban19}. However, the results show that non of these strategies is completely better than the others.
+
+Since the number of all of the descriptors in datasets such as PascalVOC is extremely large, the clustering is applied in the second step to reduce the computational cost of the problem. The centroid of each cluster, which is called a key-point or a basis, is a key feature which best represents the descriptors in the corresponding cluster. The set of the determined key-points is called a vocabulary $\mathbf{B} = [b_1,b_2,\ldots,b_M]$. The centroid of l-th cluster is shown by $b_l$.
+
+In the coding step, a code $a_i$ is assigned to each descriptor $s_i \in S$. The dimensionality of the codes is equal to the number of clusters. The simplest way to encode each descriptor is to set all of the codes to zero except the one which corresponds to the nearest centroid to the descriptor (hard coding or 1-hot encoding). This algorithm has a high rate of reconstruction error. To overcome this problem, describing each descriptor with a few nearest bases has been proposed with sufficient theoretical reasons. The tradition bag-of-words method with hard coding solves the following problem:
+
+\begin{align}
+arg\,&\min_{\mathbf{A}} \sum_{i=1}^{N} || s_i - \mathbf{B}a_i ||^{2} \\
+ & \text{s.t. only one element of $a_i$ is one and the others are zero.} \nonumber
+\end{align}
+where $\mathbf{A} = [a_1,a_2,\ldots,a_N]$ is the set of codes for $S$ and $\mathbf{B} \in \mathbb{R}^{D \times M}$ is matrix which its columns are the bases of the dictionary. 
+
+Using only one basis is a hard constraint. It can be relaxed by using a sparsity regularization term. This method which is proposed in \cite{LLC22} solves the following problem:
+
+\begin{equation}
+arg\,\min_{\mathbf{A}} \sum_{i=1}^{N} || s_i - \mathbf{B}a_i ||^{2} + \lambda||a_i||_{1} 
+\end{equation}
+
+This method yields a much less reconstruction error than hard coding and can be learnt efficiently with a linear SVM classifier.
+
+Practical experiments in \cite{shaban21} shows that using local bases for feature construction achieves better results than sparse coding. Locality-constraint Linear Coding (LLC) \cite{shaban6} is local coding scheme which solves the following problem:
+
+\begin{align}
+arg\,&\min_{\mathbf{A}} \sum_{i=1}^{N} || s_i - \mathbf{B}a_i ||^{2} + \lambda|| \mathbf{d}_i \odot a_i ||^2 \label{eq:llc}\\
+ & s.t.\, \mathbf{1}^{T}a_i = 1, \forall i \nonumber
+\end{align}
+where $\odot$ denotes element-wise multiplication, and $\mathbf{d}_i \in \mathbb{R}^M$ is represented by the following formula:
+
+\begin{equation}
+\mathbf{d}_i  = exp\left(\frac{dist(s_i,\mathbf{B})}{\sigma}\right).
+\end{equation}
+where $dist(s_i,\mathbf{B}) = [dist(s_i,b_1),\ldots,dist(s_i,b_M)]^T$, and $dist(s_i,b_j)$ is the Euclidean distance between $s_i$ and $b_j$. $\sigma$ is an adjustable constant. Local smooth sparsity, analytical solution and less reconstruction error than hard coding are the main features of LLC coding. To further speeding up the process of coding, an approximate LLC coding is also proposed in \cite{shaban6}. Instead of solving \ref{eq:llc}, $K ( K < D < M)$ nearest neighbours of $s_i$ are considered as its local bases $\mathbf{B}_i$. So, a much smaller linear system can be solved for coding:
+
+\begin{align}
+arg\,&\min_{\mathbf{A}} \sum_{i=1}^{N} || s_i - \tilde{a}_i\mathbf{B} ||^{2} \\
+ & s.t.\, \mathbf{1}^{T}\tilde{a}_i = 1, \forall i \nonumber
+\end{align}
+This reduces the computational complexity from $\mathcal{O}(M^2)$ to $\mathcal{O}(M+K^2)$, where $K \ll M$.
+
+The last step for generating features is to mix them to construct a single feature vector for each image (pooling). Computing the normalized histogram along the coding vector is the most common method in this step. However, it has been reported (without theoretical reasons) that using a maximum operator yields better results \cite{LLC22}.
+
+One of the problems in bag-of-words methods is that the final features are independent of the  location of local points. It means that changing the location of the patches across the image has no impact on the final results. Spatial pyramid matching (SPM)\cite{shaban9}  is proposed to overcome this problem. The main idea of this method is inspired by the pyramid matching kernel \cite{shaban20} method. In SPM the image is partitioned into different sub-regions at different levels. Pooling is applied on each region at each level. Then, all of the vectors obtained from each region at all levels are concatenated to create the final feature vector. Hence, the location of patches have their own influence on the final feature vector. Although good results have been reported on SPM based methods, these methods need non-linear kernels in order to have good results. So, they are computationally complex.
+
+\section{Implementation and results}
+I used the \href{http://www.cs.illinois.edu/homes/slazebni/research/SpatialPyramid.zip}{Spatial Pyramid code} provided by Prof. Lazebnik, \href{http://www.vlfeat.org/}{VLFeat package}, \href{http://www.ifp.illinois.edu/~jyang29/LLC.htm}{LLC code}, \href{http://www.robots.ox.ac.uk/~vgg/share/practical-image-classification.htm}{practical image classification guide}, and \href{http://www.csie.ntu.edu.tw/~cjlin/libsvm/}{libsvm} in order to extract features and classify images.
+ I used SIFT descriptors for feature extraction on each patch. The patches are selected on a uniform grid on each image. The size of window is 16 pixels. The step between each patch is 6 pixels. The descriptor vectors are normalized to have unit length. Sift descriptor generation is done in parallel using MATLAB.
+I used k-means clustering method on 100,000 randomly selected descriptors to build a $M = 1024$ dimensional dictionary. It should be noted that selecting more descriptors and building a bigger dictionary will improve the accuracy of the overall classification. However, they need more RAM, CPU, and running time. These values are set so that my algorithm can be runnable with my limited computational resources. 
+
+I used hard coding (HC) and LLC with spatial pyramid to construct the feature vectors for each image. Then a linear SVM is used for training/testing the performance of these methods. I also used the histogram intersection kernel method on Hard coded k-means clusters with spatial pyarmid (HIK). Since there may be multiple objects in one picture, the training and testing is in 1-vs-all method.
+The PASCAL VOC 2012 dataset consists 5717 training and 5823 validation images in 20 different categories. 
+There are some difficult objects on this dataset where their label are set to zero. I ignored these pictures for training and testing.
+The classification performance is evaluated using the Average Precision measure. It is equal to the area under the Precision/Recall curve, and the higher the score, the better is the performance.  The results of these methods for all classes are shown in table \ref{tbl:results}.
+
+\begin{center}
+\begin{table*}[!t]
+	\caption{Image classification results on PASCAL VOC 2012 validation set}
+	\label{tbl:results}
+	\vskip 0.2cm
+	\begin{subtable}
+			\centering
+			\begin{tabular}{c||c|c|c|c|c|c|c|c|c|c}
+				\hline 
+				object class & aero & bicyc & bird & boat & bottle & bus & car & cat & chair & cow \\
+				\hline \hline
+				HC  & 46.52 & 11.15 & 20.40 & 29.27 & 12.09 & 31.03 & 33.10 & 26.69 & 28.18 & 7.86 \\
+				\hline
+				LLC  & \textbf{78.91} & 41.80 & 39.85 & \textbf{51.64} & 13.62 & \textbf{73.59} & 46.33 & 54.44 & 43.34 & \textbf{19.43} \\
+				\hline
+				HIC  & 71.39 & \textbf{43.84} & \textbf{44.05}  & 48.39 & \textbf{16.75} & 72.68 & \textbf{50.91} & \textbf{55.28} & \textbf{48.26} & 18.11 \\
+				\hline
+			\end{tabular}
+	\end{subtable}
+		\vskip 0.2cm
+	\begin{subtable}
+			\centering
+			\begin{tabular}{c||c|c|c|c|c|c|c|c|c|c}
+				\hline 
+				object class & table & dog & horse & mbike & person & plant & sheep & sofa & train & tv \\
+				\hline \hline
+				HC  & 12.29 & 28.14 & 14.62  & 25.24 & 52.18 & 9.72 & 18.51 & 15.88 & 21.69 & 29.13 \\
+				\hline
+				LLC  & 33.05 & 40.27 & \textbf{39.55}  & \textbf{54.05} & 67.80 & 14.00 & \textbf{38.33} & 30.45 & 60.01 & 46.46 \\
+				\hline
+				HIC  & \textbf{37.18} & \textbf{44.70} & 38.90  & 52.87 & \textbf{75.55} & \textbf{14.60} & 35.20 & 38.30 & \textbf{64.40} & \textbf{53.57} \\
+				\hline
+			\end{tabular}
+	\end{subtable}
+	\vskip 0.2cm
+	\begin{subtable}
+			\centering
+			\begin{tabular}{c||c}
+				\hline 
+				object class & Average \\
+				\hline \hline
+				HC  & 23.68  \\
+				\hline
+				LLC  & 44.35  \\
+				\hline
+				HIC  & \textbf{46.25}  \\
+				\hline
+			\end{tabular}
+	\end{subtable}
+\end{table*}
+\end{center}
+
+%(Specially \href{http://users.cecs.anu.edu.au/~sgould}{Stephan Gould's} PhD thesis).
+%  The smoothness process is similar to the method proposed in \cite{Gould}. 
+
+\begin{thebibliography}{9}
+\bibitem{shaban3}
+G.~Csurka, C.~Dance, L.~Fan, J.~Willamowski, C.~Bray, ``Visual categorization with bags of keypoints,'' \emph{In ECCV Workshop on statistical learning in computer vision}, Vol.~1, p.22, 2004.
+
+\bibitem{shaban18}
+D.~Lowe, ``Object recognition from local scale-invariant features,'' \emph{In Computer 
+Vision,1999. The Proceedings of the Seventh IEEE International Conference on}, 
+Vol.~2, pp.1150–-1157, IEEE, 1999.
+
+\bibitem{shaban19}
+E.~Nowak, F.~Jurie, and B.~Triggs, ``Sampling strategies for bag-of-features image classiﬁcation,'' \emph{In European Conference on Computer Vision, ECCV}, pp.490-–503, 2006.
+
+\bibitem{LLC22}
+J.~Yang, K.~Yu, Y.~Gong, and T.~Huang, ``Linear spatial pyramid matching using sparse coding for image classiﬁcation,'' \emph{In Proc. of IEEE Computer Vision and Pattern Recognition, CVPR}, 2009.
+
+\bibitem{shaban21}
+K.~Yu, T.~Zhang, and Y.~Gong, ``Nonlinear learning using local coordinate coding,'' \emph{Advances in Neural Information Processing Systems}, Vol.~22, pp. 2223–-2231, 2009.
+
+\bibitem{shaban6}
+J.~Wang, J.~Yang, K.~Yu,F.~Lv, T.~Huang, and Y. Gong, ``Locality-constrained 
+linear coding for image classiﬁcation,'' \emph{ In Computer Vision and Pattern Recognition (CVPR), 2010 IEEE Conference on}, pp. 3360-–3367, 2010.
+
+\bibitem{shaban9}
+S.~Lazebnik, C.~Schmid, and J.~Ponce, ``Beyond bags of features: Spatial pyramid matching for recognizing natural scene categories,'' \emph{In Computer Vision and Pattern Recognition, 2006 IEEE Computer Society Conference on}, Vol.~2, 
+pp. 2169–-2178, IEEE, 2006.
+
+\bibitem{shaban20}
+K.~Grauman, and T.~Darrell, ``The pyramid match kernel: Discriminative classiﬁcation with sets of image features,'' \emph{In Computer Vision (ICCV), 2005 International Conference on}, Vol.~2, pp.1458–-1465, IEEE, 2005.
+
+\end{thebibliography}
+\end{document}
